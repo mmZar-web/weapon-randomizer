@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>무기 랜덤 조합기</title>
+<style>
+  :root{--w:1080px}
+  body{font-family:system-ui,Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;max-width:var(--w);margin:32px auto;padding:0 16px;line-height:1.5}
+  h1{font-size:1.6rem;margin:0 0 12px}
+  h2{font-size:1.2rem;margin:20px 0 8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .box{border:1.5px solid #bdbdbd;border-radius:10px;padding:14px;min-height:64px;background:#fff}
+  .titleRow{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:8px}
+  .btn{padding:.45rem .8rem;border:1px solid #c8c8c8;border-radius:8px;background:#fff;cursor:pointer;font-size:.9rem}
+  .btn:active{transform:translateY(1px)}
+  .toolbar{display:flex;gap:8px;align-items:center}
+  .cols{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:8px}
+  .list{border:1.5px solid #bdbdbd;border-radius:10px;min-height:160px;padding:10px;overflow:auto;max-height:280px;background:#fff}
+  .row{display:flex;align-items:center;gap:8px;padding:4px 2px}
+  .row input{transform:scale(1.1)}
+  .card{border:1.5px dashed #bdbdbd;border-radius:12px;padding:14px;min-height:84px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;background:#fafafa}
+  .big{font-size:1.15rem}
+  .muted{color:#666}
+  .actions{display:flex;gap:10px;align-items:center;margin:16px 0;flex-wrap:wrap}
+  .sticky{position:sticky;top:0;background:#fff;padding:6px 0 0}
+  #notice{font-size:.9rem;color:#888;margin:-8px 0 8px}
+  @media (max-width:900px){ .cols{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+  <h1>무기 랜덤 조합기</h1>
+
+  <div class="grid">
+    <div>
+      <h2>날</h2>
+      <div id="blade" class="card">—</div>
+    </div>
+    <div>
+      <h2>손잡이</h2>
+      <div id="handle" class="card">—</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <label><input type="checkbox" id="no-dup" checked> <strong>바닐라 제외</strong> <span class="muted">(날과 손잡이 동일 무기 금지)</span></label>
+    <button class="btn big" id="draw">랜덤 무기 뽑기</button>
+  </div>
+  <div id="notice">특수 무기는 조합 모드 사용시에만 체크할 것</div>
+
+  <div class="cols">
+    <section>
+      <div class="titleRow sticky">
+        <h2>일반무기</h2>
+        <div class="toolbar">
+          <button class="btn" data-sel="general" data-act="all">모두 선택</button>
+          <button class="btn" data-sel="general" data-act="none">모두 해제</button>
+        </div>
+      </div>
+      <div id="list-general" class="list"></div>
+    </section>
+
+    <section>
+      <div class="titleRow sticky">
+        <h2>특수무기</h2>
+        <div class="toolbar">
+          <button class="btn" data-sel="special" data-act="all">모두 선택</button>
+          <button class="btn" data-sel="special" data-act="none">모두 해제</button>
+        </div>
+      </div>
+      <div id="list-special" class="list"></div>
+    </section>
+
+    <section>
+      <div class="titleRow sticky">
+        <h2>DLC 일반무기</h2>
+        <div class="toolbar">
+          <button class="btn" data-sel="generalDLC" data-act="all">모두 선택</button>
+          <button class="btn" data-sel="generalDLC" data-act="none">모두 해제</button>
+        </div>
+      </div>
+      <div id="list-generalDLC" class="list"></div>
+    </section>
+
+    <section>
+      <div class="titleRow sticky">
+        <h2>DLC 특수무기</h2>
+        <div class="toolbar">
+          <button class="btn" data-sel="specialDLC" data-act="all">모두 선택</button>
+          <button class="btn" data-sel="specialDLC" data-act="none">모두 해제</button>
+        </div>
+      </div>
+      <div id="list-specialDLC" class="list"></div>
+    </section>
+  </div>
+
+<script>
+/* ---------- 데이터 ---------- */
+const data = {
+  general: [
+    "인형의 세이버","겨울의 레이피어","가시나무 곡도","크라트 경찰봉","소방도끼","명인 요리사의 칼","폭군 암살자의 단도",
+    "전력 코일봉","눈먼 자의 쌍날창","산성 결정창","생사의 대검","뼈를 끊는 톱","무용수의 곡도","대형 파이프렌치",
+    "군용삽","기폭 곡괭이","흑철 절삭기","명예의 창","부스터 글레이브","피스톨 착암기","저주받은 기사의 할버드",
+    "코일 묠니르","도시의 장창","원형 전기톱","산성 대곡도","시계검","카커스 결정도끼","샐러맨더 단도","살아있는 인형들의 도끼"
+  ],
+  generalDLC: [
+    "로렌치니 볼트","미치광이 바람개비","내일의 인형 용접기","라 벤데타","아르케의 수호자","침묵 설교단의 메이스"
+  ],
+  special: [
+    "일곱 가지의 태엽보도","에티켓","아르크의 성검","약속의 트리아이나","퍼펫 더 리퍼","얼어붙은 만찬",
+    "쌍룡검","우로보로스의 눈","부의 대가","인간성의 증거","황금의 거짓말","청룡언월도"
+  ],
+  specialDLC: [
+    "어궁구","죽음의 발톱","창백한 기사","모나드의 장미검"
+  ]
+};
+
+const byId = id => document.getElementById(id);
+const storageKey = 'weapon-checks-v2';
+
+function saveChecks() {
+  const all = Array.from(document.querySelectorAll('.list input[type=checkbox]'))
+    .reduce((acc, el) => (acc[el.id] = el.checked, acc), {});
+  localStorage.setItem(storageKey, JSON.stringify(all));
+}
+
+function loadChecks() {
+  try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); }
+  catch { return {}; }
+}
+
+function randInt(n){ return Math.floor(Math.random()*n); }
+
+/* ---------- 렌더링 ---------- */
+function renderList(containerId, items, prefix, defaultChecked=true){
+  const saved = loadChecks();
+  const el = byId(containerId);
+  el.innerHTML = '';
+  items.forEach((name, idx)=>{
+    const id = `${prefix}_${idx}`;
+    const row = document.createElement('label');
+    row.className = 'row';
+    row.innerHTML = `<input type="checkbox" id="${id}"><span>${name}</span>`;
+    el.appendChild(row);
+    const cb = row.querySelector('input');
+    // 기본값: 일반무기/일반DLC는 true, 보스무기는 false
+    const isBoss = prefix.includes('special');
+    cb.checked = saved[id] ?? (isBoss ? false : defaultChecked);
+    cb.addEventListener('change', saveChecks);
+  });
+}
+
+function renderAll(){
+  renderList('list-general', data.general, 'general');
+  renderList('list-generalDLC', data.generalDLC, 'generalDLC');
+  renderList('list-special', data.special, 'special', false);
+  renderList('list-specialDLC', data.specialDLC, 'specialDLC', false);
+}
+
+/* ---------- 선택/해제 버튼 ---------- */
+function setAll(prefix, val){
+  document.querySelectorAll(`#list-${prefix} input[type=checkbox]`).forEach(cb=>cb.checked = val);
+  saveChecks();
+}
+
+document.querySelectorAll('.btn[data-sel]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const key = btn.getAttribute('data-sel');
+    const act = btn.getAttribute('data-act');
+    setAll(key, act==='all');
+  });
+});
+
+/* ---------- 추첨 ---------- */
+function getCheckedNames(){
+  const sections = ['general','generalDLC','special','specialDLC'];
+  const names = [];
+  sections.forEach(sec=>{
+    const list = data[sec];
+    list.forEach((name, idx)=>{
+      const id = `${sec}_${idx}`;
+      const cb = byId(id);
+      if(cb && cb.checked) names.push(name);
+    });
+  });
+  return names;
+}
+
+function draw(){
+  const pool = getCheckedNames();
+  const noDup = byId('no-dup').checked;
+
+  if(noDup && pool.length < 2){
+    alert('중복 금지 상태에서는 최소 2개 이상의 무기를 선택해야 합니다.');
+    return;
+  }
+  if(pool.length === 0){
+    alert('무기를 한 개 이상 선택하세요.');
+    return;
+  }
+
+  let blade, handle;
+  if(noDup){
+    const i = randInt(pool.length);
+    let j = randInt(pool.length-1);
+    if(j >= i) j += 1;
+    blade = pool[i];
+    handle = pool[j];
+  } else {
+    blade = pool[randInt(pool.length)];
+    handle = pool[randInt(pool.length)];
+  }
+
+  byId('blade').textContent = blade;
+  byId('handle').textContent = handle;
+}
+
+renderAll();
+byId('draw').addEventListener('click', draw);
+</script>
+</body>
+</html>
