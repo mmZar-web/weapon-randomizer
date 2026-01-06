@@ -115,16 +115,45 @@ const boss = [
 const bossDLC = [
 "어궁구","죽음의 발톱","창백한 기사","모나드의 장미검"
 ];
-
+function saveChecks(){
+  const state = {};
+  document.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    state[cb.id] = cb.checked;
+  });
+  localStorage.setItem("weapon-checks", JSON.stringify(state));
+}
+function loadChecks(){
+  const saved = JSON.parse(localStorage.getItem("weapon-checks") || "{}");
+  Object.entries(saved).forEach(([id, val])=>{
+    const cb = document.getElementById(id);
+    if(cb) cb.checked = val;
+  });
+}
+window.addEventListener("load", loadChecks);
 /* ===== 렌더 ===== */
-function render(listId, items, prefix){
-  const el=document.getElementById(listId);
-  items.forEach((w,i)=>{
-    el.innerHTML+=`
-      <label class="row">
-        <input type="checkbox" id="${prefix}_${i}" checked>
-        ${w}
-      </label>`;
+function render(listId, items, prefix, defaultChecked=true){
+  const el = document.getElementById(listId);
+  const saved = loadChecks();          // ← 저장된 상태 읽기
+  el.innerHTML = "";
+
+  items.forEach((w, i)=>{
+    const id = `${prefix}_${i}`;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = id;
+
+    // ✅ 저장된 값이 있으면 그걸 우선 사용
+    cb.checked = saved[id] ?? defaultChecked;
+
+    // ✅ 변경 시 자동 저장
+    cb.addEventListener("change", saveChecks);
+
+    const label = document.createElement("label");
+    label.className = "row";
+    label.appendChild(cb);
+    label.append(" " + w);
+
+    el.appendChild(label);
   });
 }
 
@@ -198,7 +227,9 @@ document.getElementById("draw").onclick=()=>{
   document.getElementById("blade").textContent=blade;
   document.getElementById("handle").textContent=handle;
 };
+  
 </script>
 
 </body>
 </html>
+
